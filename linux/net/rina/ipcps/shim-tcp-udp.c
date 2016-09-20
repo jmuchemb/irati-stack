@@ -1793,8 +1793,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         app->app_name = name_dup(name);
         if (!app->app_name) {
                 LOG_ERR("Application registration has failed");
-                rkfree(app);
-                return -1;
+                goto err;
         }
 
         exp_reg = find_exp_reg(data, name);
@@ -1802,8 +1801,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 LOG_ERR("That application is not expected to register"
                         " <APN=%s AEN=%s>",
                         name->process_name, name->entity_name);
-                rkfree(app);
-                return -1;
+                goto err;
         }
         LOG_DBG("Application found in exp_reg");
 
@@ -1812,20 +1810,15 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         err = sock_create_kern(data->host_name.family, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
         if (err < 0) {
-                LOG_ERR("Could not create UDP socket for registration");
-                name_destroy(app->app_name);
-                rkfree(app);
-                return -1;
+                LOG_ERR("register: error %i creating UDP socket", -err);
+                goto err_name;
         }
 
         sa_len = sockaddr_init(&addr, &data->host_name, app->port);
         err = kernel_bind(app->udpsock, &addr.sa, sa_len);
         if (err < 0) {
-                LOG_ERR("Could not bind UDP socket for registration");
-                sock_release(app->udpsock);
-                name_destroy(app->app_name);
-                rkfree(app);
-                return -1;
+                LOG_ERR("register: error %i binding UDP socket", -err);
+                goto err_udp;
         }
 
         write_lock_bh(&app->udpsock->sk->sk_callback_lock);
@@ -1838,31 +1831,20 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         err = sock_create_kern(data->host_name.family, SOCK_STREAM, IPPROTO_TCP,
                                &app->tcpsock);
         if (err < 0) {
-                LOG_ERR("could not create TCP socket for registration");
-                sock_release(app->udpsock);
-                name_destroy(app->app_name);
-                rkfree(app);
-                return -1;
+                LOG_ERR("register: error %i creating TCP socket", -err);
+                goto err_udp;
         }
 
         err = kernel_bind(app->tcpsock, &addr.sa, sa_len);
         if (err < 0) {
-                LOG_ERR("Could not bind TCP socket for registration");
-                sock_release(app->tcpsock);
-                sock_release(app->udpsock);
-                name_destroy(app->app_name);
-                rkfree(app);
-                return -1;
+                LOG_ERR("register: error %i binding TCP socket", -err);
+                goto err_tcp;
         }
 
         err = kernel_listen(app->tcpsock, 5);
         if (err < 0) {
-                LOG_ERR("Could not listen on TCP socket for registration");
-                sock_release(app->tcpsock);
-                sock_release(app->udpsock);
-                name_destroy(app->app_name);
-                rkfree(app);
-                return -1;
+                LOG_ERR("register: error %i listening on TCP socket", -err);
+                goto err_tcp;
         }
 
         write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
@@ -1879,6 +1861,15 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         spin_unlock(&data->lock);
 
         return 0;
+err_tcp:
+        sock_release(app->tcpsock);
+err_udp:
+        sock_release(app->udpsock);
+err_name:
+        name_destroy(app->app_name);
+err:
+        rkfree(app);
+        return -1;
 }
 
 static int application_unregister(struct ipcp_instance_data * data,
