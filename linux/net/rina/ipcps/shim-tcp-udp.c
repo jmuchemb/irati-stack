@@ -1769,7 +1769,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         union address         addr;
         unsigned              sa_len;
         struct exp_reg *      exp_reg;
-        int                   err;
+        int                   err, option;
 
         LOG_HBEAT;
 
@@ -1833,6 +1833,15 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         if (err < 0) {
                 LOG_ERR("register: error %i creating TCP socket", -err);
                 goto err_udp;
+        }
+
+        option = 1;
+        err = kernel_setsockopt(app->tcpsock, SOL_SOCKET, SO_REUSEADDR,
+                                (char *)&option, sizeof option);
+        if (err < 0) {
+                LOG_ERR("register: error %i setting"
+                        " SO_REUSEADDR for TCP socket", -err);
+                goto err_tcp;
         }
 
         err = kernel_bind(app->tcpsock, &addr.sa, sa_len);
