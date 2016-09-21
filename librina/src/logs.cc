@@ -91,7 +91,7 @@ int setLogFile(const char* file)
 	if (logStream != stdout) {
 		result = -1;
 	} else {
-		logStream = fopen(pathToFile.c_str(), "w");
+		logStream = fopen(pathToFile.c_str(), "a");
 		if (!logStream) {
 			logStream = stdout;
 			result = -1;
