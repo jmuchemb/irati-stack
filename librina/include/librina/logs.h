@@ -26,7 +26,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -101,10 +100,10 @@ void logFunc(enum LOG_LEVEL level, const char * fmt, ...);
 
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                                    \
         do {                                                                  \
-		logFunc(LEVEL,                                                    \
-                    "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n", \
-                    getpid(), time(0), ##ARGS);                               \
-	} while (0)
+                logFunc(LEVEL,                                                \
+                        PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",        \
+                        ##ARGS);                                              \
+        } while (0)
 
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, EMERG, FMT, ##ARGS)
 #define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, ALERT, FMT, ##ARGS)
@@ -115,12 +114,12 @@ void logFunc(enum LOG_LEVEL level, const char * fmt, ...);
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, DBG,   FMT, ##ARGS)
 
-#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                       \
-        do {                                                                      \
-		logFunc(LEVEL,                                                        \
-                    "%d(%ld)#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n", \
-                    getpid(), time(0), __func__, ##ARGS);                         \
-	} while (0)
+#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                   \
+        do {                                                                  \
+                logFunc(LEVEL,                                                \
+                        PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n",    \
+                        __func__, ##ARGS);                                    \
+        } while (0)
 
 #define LOGF_EMERG(FMT, ARGS...) __LOGF(RINA_PREFIX, EMERG, FMT, ##ARGS)
 #define LOGF_ALERT(FMT, ARGS...) __LOGF(RINA_PREFIX, ALERT, FMT, ##ARGS)

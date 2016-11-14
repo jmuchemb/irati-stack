@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <string>
+#include <sys/time.h>
 
 #define RINA_PREFIX "librina.logs"
 
@@ -90,7 +91,7 @@ int setLogFile(const char* file)
 	if (logStream != stdout) {
 		result = -1;
 	} else {
-		logStream = fopen(pathToFile.c_str(), "w");
+		logStream = fopen(pathToFile.c_str(), "a");
 		if (!logStream) {
 			logStream = stdout;
 			result = -1;
@@ -107,8 +108,19 @@ void logFunc(enum LOG_LEVEL level, const char * fmt, ...)
 	//Avoid to use locking
 	FILE* stream = logStream;
 
+	char buf[sizeof "2016-09-21 12:41:54"];
+	struct timeval tv;
+	struct tm tm;
+
 	if(level > logLevel)
 		return;
+
+	gettimeofday(&tv, NULL);
+	gmtime_r(&tv.tv_sec, &tm);
+	strftime(buf, sizeof buf, "%F %T", &tm);
+
+	fprintf(stream, "%d(%s.%04u)#",
+		getpid(), buf, unsigned(tv.tv_usec / 100));
 
 	va_list args;
 
